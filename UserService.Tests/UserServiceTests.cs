@@ -24,11 +24,12 @@ namespace UserService.Tests
             _configurationMock = new Mock<IConfiguration>();
 
             var settings = new Dictionary<string, string>
-    {
-        {"JwtSettings:SecretKey", "SuperSecretKeyForJwtTests_1234567890!@#"}, // ✅ >= 32 chars
-        {"JwtSettings:Issuer", "TestIssuer"},
-        {"JwtSettings:AccessTokenExpirationMinutes", "60"}
-    };
+            {
+                {"JwtSettings:SecretKey", "SuperSecretKeyForJwtTests_1234567890!@#"}, // >= 32 chars
+                {"JwtSettings:Issuer", "TestIssuer"},
+                {"JwtSettings:AccessTokenExpirationMinutes", "60"}
+            };
+
             var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 
             _configurationMock.Setup(x => x[It.IsAny<string>()])
@@ -37,7 +38,6 @@ namespace UserService.Tests
             _userService = new UserService.Application.Services.UserService(
                 _userRepositoryMock.Object, _configurationMock.Object);
         }
-
 
         // ================================
         // RegisterAsync
@@ -54,11 +54,11 @@ namespace UserService.Tests
                 FullName = "User One"
             };
 
-            _userRepositoryMock.Setup(r => r.FindByEmailAsync(dto.Email)).ReturnsAsync((User)null);
-            _userRepositoryMock.Setup(r => r.FindByUserNameAsync(dto.UserName)).ReturnsAsync((User)null);
+            _userRepositoryMock.Setup(r => r.FindByEmailAsync(dto.Email)).ReturnsAsync((User?)null);
+            _userRepositoryMock.Setup(r => r.FindByUserNameAsync(dto.UserName)).ReturnsAsync((User?)null);
             _userRepositoryMock.Setup(r => r.CreateUserAsync(It.IsAny<User>(), dto.Password)).ReturnsAsync(true);
             _userRepositoryMock.Setup(r => r.AddUserToRoleAsync(It.IsAny<User>(), "Customer"))
-                .Returns(Task.FromResult(true)); // ✅ FIXED
+                .Returns(Task.FromResult(true));
 
             var result = await _userService.RegisterAsync(dto);
 
@@ -85,6 +85,7 @@ namespace UserService.Tests
                 EmailOrUserName = "user@example.com",
                 Password = "Pass123!"
             };
+
             var user = new User
             {
                 Id = Guid.NewGuid(),
@@ -157,7 +158,6 @@ namespace UserService.Tests
             var dto = new RefreshTokenRequestDTO { ClientId = "client", RefreshToken = "old" };
             var user = new User { Id = Guid.NewGuid(), Email = "user@example.com" };
 
-            // ✅ FIX: No direct assignment to IsActive (computed)
             var refresh = new RefreshToken
             {
                 UserId = user.Id,
@@ -184,7 +184,6 @@ namespace UserService.Tests
         [Fact]
         public async Task RevokeRefreshTokenAsync_ShouldReturnTrue_WhenTokenValid()
         {
-            // ✅ FIX: create valid computed IsActive = true
             var token = new RefreshToken
             {
                 RevokedAt = null,
@@ -212,6 +211,17 @@ namespace UserService.Tests
             var result = await _userService.ForgotPasswordAsync(user.Email);
 
             Assert.Equal("reset_token", result.Token);
+        }
+
+        [Fact]
+        public async Task ForgotPasswordAsync_ShouldReturnNull_WhenUserNotFound()
+        {
+            _userRepositoryMock.Setup(r => r.FindByEmailAsync(It.IsAny<string>()))
+                .ReturnsAsync((User?)null);
+
+            var result = await _userService.ForgotPasswordAsync("missing@example.com");
+
+            Assert.Null(result);
         }
 
         // ================================
@@ -257,6 +267,7 @@ namespace UserService.Tests
                 Email = "u@u.com",
                 UserName = "u1"
             };
+
             _userRepositoryMock.Setup(r => r.FindByIdAsync(user.Id)).ReturnsAsync(user);
 
             var result = await _userService.GetProfileAsync(user.Id);
@@ -292,6 +303,7 @@ namespace UserService.Tests
             {
                 new Address { Id = Guid.NewGuid(), City = "NY", Country = "USA" }
             };
+
             _userRepositoryMock.Setup(r => r.GetAddressesByUserIdAsync(userId)).ReturnsAsync(addresses);
 
             var result = await _userService.GetAddressesAsync(userId);
@@ -355,6 +367,7 @@ namespace UserService.Tests
 
             Assert.Equal("Berlin", result.City);
         }
+
         [Fact]
         public async Task RegisterAsync_ShouldReturnFalse_WhenUsernameExists()
         {
@@ -366,7 +379,7 @@ namespace UserService.Tests
             };
 
             _userRepositoryMock.Setup(r => r.FindByEmailAsync(dto.Email))
-                .ReturnsAsync((User)null);
+                .ReturnsAsync((User?)null);
             _userRepositoryMock.Setup(r => r.FindByUserNameAsync(dto.UserName))
                 .ReturnsAsync(new User { UserName = dto.UserName });
 
@@ -374,6 +387,7 @@ namespace UserService.Tests
 
             Assert.False(result);
         }
+
         [Fact]
         public async Task LoginAsync_ShouldReturnError_WhenEmailNotConfirmed()
         {
@@ -393,6 +407,7 @@ namespace UserService.Tests
 
             Assert.Equal("Email not confirmed. Please verify your email.", result.ErrorMessage);
         }
+
         [Fact]
         public async Task LoginAsync_ShouldReturnError_WhenAccountLockedOut()
         {
@@ -431,7 +446,7 @@ namespace UserService.Tests
         [Fact]
         public async Task VerifyConfirmationEmailAsync_ShouldReturnFalse_WhenUserNotFound()
         {
-            _userRepositoryMock.Setup(r => r.FindByIdAsync(It.IsAny<Guid>())).ReturnsAsync((User)null);
+            _userRepositoryMock.Setup(r => r.FindByIdAsync(It.IsAny<Guid>())).ReturnsAsync((User?)null);
 
             var dto = new ConfirmEmailDTO { UserId = Guid.NewGuid(), Token = "xyz" };
 
@@ -439,21 +454,5 @@ namespace UserService.Tests
 
             Assert.False(result);
         }
-
-        [Fact]
-        public async Task ForgotPasswordAsync_ShouldReturnNull_WhenUserNotFound()
-        {
-            _userRepositoryMock.Setup(r => r.FindByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync((User)null);
-
-            var result = await _userService.ForgotPasswordAsync("missing@example.com");
-
-            Assert.Null(result);
-        }
-
-
-
-
-
     }
 }
