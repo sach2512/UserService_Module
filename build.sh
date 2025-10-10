@@ -1,12 +1,18 @@
-﻿#!/bin/bash
-set -e  # stop on first error
+﻿#!/usr/bin/env bash
+set -e
+echo "🚀 Starting .NET 8 build for UserService.API..."
 
-echo "🟢 Starting build for Render..."
+# Install .NET 8 SDK
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
+export PATH=$PATH:$HOME/.dotnet
 
-# Restore and publish using Render's built-in .NET SDK (no apt-get)
-dotnet restore
+# Show .NET info
+dotnet --info
 
-dotnet publish UserService.API/UserService.API.csproj -c Release -o out
+# Restore dependencies (NOTE: no src path)
+dotnet restore UserService.sln
 
-echo "✅ Build complete! Ready to run with:"
-echo "    dotnet out/UserService.API.dll"
+# Publish API
+dotnet publish UserService.API -c Release -r linux-x64 --self-contained true -p:PublishTrimmed=false -o out
+
+echo "✅ Build and publish completed successfully."
