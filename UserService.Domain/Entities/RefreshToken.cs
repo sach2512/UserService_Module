@@ -4,6 +4,7 @@
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
+       
         public string Token { get; set; } = null!;
         public string ClientId { get; set; } = null!;    // Web/Android/iOS etc.
         public Client Client { get; set; } = null!;

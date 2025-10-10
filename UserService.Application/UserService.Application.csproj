@@ -1,14 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>UserService.Application</RootNamespace>
+		<!-- ✅ Add this -->
+		<AssemblyName>UserService.Application</AssemblyName>
+		<!-- ✅ Optional, helps with reflection consistency -->
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\UserService.Domain\UserService.Domain.csproj" />
-    <ProjectReference Include="..\UserService.Infrastructure\UserService.Infrastructure.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\UserService.Domain\UserService.Domain.csproj" />
+		<ProjectReference Include="..\UserService.Infrastructure\UserService.Infrastructure.csproj" />
+	</ItemGroup>
 
 </Project>
