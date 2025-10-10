@@ -15,8 +15,9 @@ namespace UserService.API
     {
         public static void Main(string[] args)
         {
-            
             var builder = WebApplication.CreateBuilder(args);
+
+            // ? Bind to Render's port (default to 5000 locally)
             var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
             builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
@@ -27,40 +28,32 @@ namespace UserService.API
                     options.JsonSerializerOptions.PropertyNamingPolicy = null;
                 });
 
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             builder.Services.AddDbContext<UserDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("UserDbConnection")));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("UserDbConnection")));
 
             builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
-                // Password policy
                 options.Password.RequireDigit = true;
                 options.Password.RequiredLength = 8;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = true;
                 options.Password.RequireLowercase = true;
-
-                // Lockout settings
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.AllowedForNewUsers = true;
-
-                // User settings (optional)
                 options.User.RequireUniqueEmail = true;
             })
             .AddEntityFrameworkStores<UserDbContext>()
             .AddDefaultTokenProviders();
 
-            // Configure token lifespan (e.g., password reset, email confirmation)
             builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
             {
-                opt.TokenLifespan = TimeSpan.FromHours(3); // Set token validity duration
+                opt.TokenLifespan = TimeSpan.FromHours(3);
             });
 
-            //Adding JWT Authentication
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -75,7 +68,9 @@ namespace UserService.API
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!)
+                    )
                 };
             });
 
@@ -84,14 +79,14 @@ namespace UserService.API
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            // ? REMOVE THIS — it breaks on Render
+            // app.UseHttpsRedirection();
 
             app.UseAuthentication();
             app.UseAuthorization();
