@@ -37,8 +37,9 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-             dotnet restore ./UserService_Module/UserService.sln
-             dotnet test ./UserService_Module/UserService.Tests/UserService.Tests.csproj --verbosity normal
+              dotnet restore ./UserService.sln
+              dotnet test ./UserService.Tests/UserService.Tests.csproj --verbosity normal
+
 
 
 
