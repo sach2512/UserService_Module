@@ -33,6 +33,9 @@
     <ProjectReference Include="..\UserService.Domain\UserService.Domain.csproj" />
     <ProjectReference Include="..\UserService.Infrastructure\UserService.Infrastructure.csproj" />
   </ItemGroup>
+	<PropertyGroup>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\UserService.Infrastructure\UserService.Infrastructure.csproj" />
 	</ItemGroup>
