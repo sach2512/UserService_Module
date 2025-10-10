@@ -6,7 +6,7 @@ using UAParser;
 using UserService.API.DTOs;
 using UserService.Application.DTOs;
 using UserService.Application.Services;
-
+//this is User Controller
 namespace UserService.API.Controllers
 {
     [ApiController]
