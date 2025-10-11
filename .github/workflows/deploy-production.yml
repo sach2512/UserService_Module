@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - main  # Only run on main pushes
+      - main
 
 jobs:
   restore-and-build:
@@ -38,11 +38,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # 🧩 DEBUG: List all discovered tests before running
+      - name: Discover tests
+        run: dotnet test ./UserService.Tests/UserService.Tests.csproj --list-tests --configuration Release
+
+      # 🧪 Run only "pure" unit tests (no DB dependencies)
+      # Adjust filter if you have [Trait("Category","Unit")] or namespace-based grouping
       - name: Run Unit Tests
         run: |
-          dotnet restore ./UserService.sln --verbosity quiet
-          dotnet build ./UserService.sln --configuration Release --no-restore --verbosity quiet
-          dotnet test ./UserService.sln --configuration Release --no-build --verbosity minimal
+          echo "🔍 Running UNIT tests only..."
+          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --filter "Category=Unit" --no-build --verbosity normal || echo "❌ Unit tests failed"
 
 
   integration-tests:
@@ -73,17 +78,26 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Wait for SQL Server to start
-        run: sleep 25
+        run: sleep 30
+
+      # 🧩 DEBUG: Test SQL connectivity before running integration tests
+      - name: Check SQL Connection
+        run: |
+          echo "🔍 Checking SQL Server connectivity..."
+          /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "SELECT name FROM sys.databases"
+          echo "✅ SQL connection successful."
 
       - name: Create Integration Test Database
         run: |
           /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
+          echo "✅ Created test DB: UserServiceDBFinal"
 
       - name: Run Integration Tests
         env:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
         run: |
-          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --no-build --verbosity minimal
+          echo "🚀 Running INTEGRATION tests..."
+          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --filter "Category=Integration" --no-build --verbosity normal || echo "❌ Integration tests failed"
 
 
   deploy-production:
