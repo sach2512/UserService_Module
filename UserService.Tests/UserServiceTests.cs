@@ -24,13 +24,16 @@ namespace UserService.Tests
             _configurationMock = new Mock<IConfiguration>();
 
             var settings = new Dictionary<string, string>
-            {
-                {"JwtSettings:SecretKey", "SuperSecretKeyForJwtTests_1234567890!@#"}, // >= 32 chars
-                {"JwtSettings:Issuer", "TestIssuer"},
-                {"JwtSettings:AccessTokenExpirationMinutes", "60"}
-            };
+    {
+        {"JwtSettings:SecretKey", "SuperSecretKeyForJwtTests_1234567890!@#"}, // >= 32 chars
+        {"JwtSettings:Issuer", "TestIssuer"},
+        {"JwtSettings:AccessTokenExpirationMinutes", "60"}
+    };
 
-            var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+            // ✅ Fix: Cast to nullable string to satisfy .NET 8 AddInMemoryCollection
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(settings.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value))
+                .Build();
 
             _configurationMock.Setup(x => x[It.IsAny<string>()])
                 .Returns((string key) => config[key]);
@@ -38,6 +41,7 @@ namespace UserService.Tests
             _userService = new UserService.Application.Services.UserService(
                 _userRepositoryMock.Object, _configurationMock.Object);
         }
+
 
         // ================================
         // RegisterAsync
