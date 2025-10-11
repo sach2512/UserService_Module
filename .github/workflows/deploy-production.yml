@@ -7,6 +7,7 @@ on:
       - main   # Trigger only when pushing to main
 
 jobs:
+  # 🏗️ 1. Build job
   restore-and-build:
     runs-on: ubuntu-22.04
 
@@ -25,7 +26,17 @@ jobs:
       - name: Build app
         run: dotnet build --configuration Release --no-restore --verbosity quiet
 
+      # ✅ Upload build outputs so test jobs can reuse them
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            **/bin/Release/net8.0/
+          if-no-files-found: error
 
+
+  # 🧪 2. Unit Tests job
   unit-tests:
     runs-on: ubuntu-22.04
     needs: restore-and-build
@@ -39,6 +50,12 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # ✅ Download build output from previous job
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
       - name: Discover tests
         run: dotnet test ./UserService.Tests/UserService.Tests.csproj --list-tests --configuration Release
 
@@ -51,6 +68,7 @@ jobs:
             --no-build --verbosity normal
 
 
+  # 🔗 3. Integration Tests job
   integration-tests:
     runs-on: ubuntu-22.04
     needs: unit-tests
@@ -76,7 +94,13 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # ✅ Install SQL tools (works on ubuntu-22.04)
+      # ✅ Download build output again
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      # ✅ Install SQL tools
       - name: Install SQL tools
         run: |
           sudo apt-get update
@@ -119,6 +143,7 @@ jobs:
             --no-build --verbosity normal
 
 
+  # ☁️ 4. Deploy to Production job
   deploy-production:
     runs-on: ubuntu-22.04
     needs: [unit-tests, integration-tests]
