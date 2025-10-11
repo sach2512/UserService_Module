@@ -38,11 +38,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # 🔍 Debug: List discovered tests
       - name: Discover tests
         run: dotnet test ./UserService.Tests/UserService.Tests.csproj --list-tests --configuration Release
 
-      # 🧪 Run Unit Tests (only)
       - name: Run Unit Tests
         run: |
           echo "🧪 Running UNIT tests..."
@@ -65,7 +63,7 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD}' -Q 'SELECT 1' || exit 1"
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${{ secrets.SQL_PASSWORD }}' -Q 'SELECT 1' || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 30
@@ -81,7 +79,6 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # 🕒 Wait for SQL Server to start and print logs
       - name: Wait for SQL Server to start and show logs
         run: |
           echo "⏳ Waiting 90s for SQL Server to initialize..."
@@ -96,7 +93,6 @@ jobs:
           echo "🔍 Checking if SQL Server is healthy..."
           docker inspect -f '{{.State.Health.Status}}' sqlserver-test || true
 
-      # 🔍 Test SQL Connection (retry up to 3 times)
       - name: Check SQL Connection
         run: |
           echo "🔍 Testing SQL Server connectivity..."
@@ -107,13 +103,11 @@ jobs:
           done
           echo "✅ SQL connection successful (or max retries reached)."
 
-      # 🧱 Create Test Database
       - name: Create Integration Test Database
         run: |
           /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
           echo "✅ Created test DB: UserServiceDBFinal"
 
-      # 🚀 Run Integration Tests
       - name: Run Integration Tests
         env:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
@@ -138,11 +132,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # 📦 Publish Application
       - name: Publish app
         run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish --verbosity quiet
 
-      # ☁️ Deploy to Azure Web App
       - name: Deploy to Azure Web App (Production)
         uses: azure/webapps-deploy@v3
         with:
