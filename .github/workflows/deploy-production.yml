@@ -38,7 +38,7 @@ jobs:
       - name: Run Unit Tests
         run: |
               dotnet restore ./UserService.sln
-               dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --no-build --verbosity minimal
+              dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --verbosity minimal
 
 
 
