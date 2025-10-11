@@ -3,11 +3,12 @@
 on:
   push:
     branches:
-      - main  # 👈 trigger only when pushing to main
+      - main  # 👈 runs only when pushing to main
 
 jobs:
   restore-and-build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,14 +19,16 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore --verbosity quiet
 
       - name: Build app
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release --no-restore --verbosity quiet
+
 
   unit-tests:
     runs-on: ubuntu-latest
     needs: restore-and-build
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,15 +38,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests (minimal logging)
         run: |
-          dotnet restore ./UserService.sln
-          dotnet build ./UserService.sln --no-incremental
-          dotnet test ./UserService.Tests/UserService.Tests.csproj --no-restore --verbosity minimal
+          dotnet restore ./UserService.sln --verbosity quiet
+          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --no-build --verbosity minimal
+
 
   integration-tests:
     runs-on: ubuntu-latest
     needs: unit-tests
+
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -70,18 +74,21 @@ jobs:
       - name: Wait for SQL Server to start
         run: sleep 20
 
-      - name: Create integration test database
+      - name: Create Integration Test Database
         run: |
           /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
 
-      - name: Run Integration Tests
+      - name: Run Integration Tests (minimal logging)
         env:
           ConnectionStrings__UserDbConnection: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
-        run: dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --no-build --verbosity minimal
+        run: |
+          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --no-build --verbosity minimal
+
 
   deploy-production:
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]  # 👈 deploy only if both test jobs succeed
+    needs: [unit-tests, integration-tests]  # ✅ only run if all tests succeed
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,11 +99,11 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish app
-        run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish
+        run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish --verbosity quiet
 
       - name: Deploy to Azure Web App (Production)
         uses: azure/webapps-deploy@v3
         with:
-          app-name: "user-service-prod"  # 👈 your production web app name
+          app-name: "user-service-prod"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: ./publish
