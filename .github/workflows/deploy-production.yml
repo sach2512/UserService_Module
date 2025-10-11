@@ -8,7 +8,7 @@ on:
 
 jobs:
   restore-and-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
@@ -27,7 +27,7 @@ jobs:
 
 
   unit-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: restore-and-build
 
     steps:
@@ -52,7 +52,7 @@ jobs:
 
 
   integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: unit-tests
 
     services:
@@ -76,7 +76,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # ✅ Install sqlcmd tools on the runner
+      # ✅ Install SQL tools (works on ubuntu-22.04)
       - name: Install SQL tools
         run: |
           sudo apt-get update
@@ -88,10 +88,8 @@ jobs:
         run: |
           echo "⏳ Waiting 30s for SQL Server to initialize..."
           sleep 30
-
           echo "🐳 Docker containers running:"
           docker ps -a
-
           echo "📜 SQL Server logs:"
           docker logs sqlserver-test || true
 
@@ -122,7 +120,7 @@ jobs:
 
 
   deploy-production:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [unit-tests, integration-tests]
 
     steps:
