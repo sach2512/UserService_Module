@@ -16,16 +16,11 @@ namespace UserService.Tests
 
         public TestDatabaseFixture()
         {
-            // 🧭 STEP 1: Locate appsettings.json
-            string appSettingsPath = null!;
-            var baseDir = AppContext.BaseDirectory;
-            var candidate = Path.Combine(baseDir, "appsettings.json");
+            // 🔍 Step 1: Locate appsettings.json
+            string baseDir = AppContext.BaseDirectory;
+            string appSettingsPath = Path.Combine(baseDir, "appsettings.json");
 
-            if (File.Exists(candidate))
-            {
-                appSettingsPath = candidate;
-            }
-            else
+            if (!File.Exists(appSettingsPath))
             {
                 var dir = new DirectoryInfo(baseDir);
                 while (dir != null && !File.Exists(Path.Combine(dir.FullName, "appsettings.json")))
@@ -39,42 +34,40 @@ namespace UserService.Tests
 
             Console.WriteLine($"✅ Using appsettings.json from: {appSettingsPath}");
 
-            // 🧩 STEP 2: Load configuration
+            // 🧩 Step 2: Load configuration
             var configuration = new ConfigurationBuilder()
                 .AddJsonFile(appSettingsPath, optional: false, reloadOnChange: true)
                 .Build();
 
-            var connectionString = configuration.GetConnectionString("MyConnectionString")
-                ?? throw new InvalidOperationException("Missing 'MyConnectionString' in appsettings.json");
+            // 🧠 Step 3: Prefer environment variable (for GitHub Actions)
+            var connectionString =
+                Environment.GetEnvironmentVariable("ConnectionStrings__MyConnectionString") ??
+                configuration.GetConnectionString("MyConnectionString") ??
+                throw new InvalidOperationException("Missing database connection string.");
 
-            Console.WriteLine($"✅ Connection String loaded: {connectionString}");
+            Console.WriteLine($"✅ Connection string used: {connectionString}");
 
-            // 🧱 STEP 3: Configure DI
+            // 🧱 Step 4: Setup dependency injection
             var services = new ServiceCollection();
 
-            // Add logging (fix for UserManager logger dependency)
             services.AddLogging();
 
-            // Add DbContext
             services.AddDbContext<UserDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
-            // Add Identity (ApplicationUser + ApplicationRole)
             services.AddIdentity<ApplicationUser, ApplicationRole>()
                     .AddEntityFrameworkStores<UserDbContext>()
                     .AddDefaultTokenProviders();
 
-            // Add configuration
             services.AddSingleton<IConfiguration>(configuration);
 
-            // Build provider
             ServiceProvider = services.BuildServiceProvider();
 
-            // 🛠️ STEP 4: Apply migrations automatically
+            // ⚙️ Step 5: Apply migrations automatically
             DbContext = ServiceProvider.GetRequiredService<UserDbContext>();
             Console.WriteLine("🚀 Applying migrations...");
             DbContext.Database.Migrate();
-            Console.WriteLine("✅ Migrations applied successfully, DB ready for integration tests.");
+            Console.WriteLine("✅ Database ready for integration tests.");
         }
 
         public void Dispose()

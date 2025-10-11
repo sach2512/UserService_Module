@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - main  # 👈 runs only when pushing to main
+      - main  # Only run on main pushes
 
 jobs:
   restore-and-build:
@@ -73,15 +73,15 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Wait for SQL Server to start
-        run: sleep 20
+        run: sleep 25
 
       - name: Create Integration Test Database
         run: |
           /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
 
-      - name: Run Integration Tests (minimal logging)
+      - name: Run Integration Tests
         env:
-          ConnectionStrings__UserDbConnection: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
+          ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
         run: |
           dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --no-build --verbosity minimal
 
