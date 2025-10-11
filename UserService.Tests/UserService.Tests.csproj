@@ -15,39 +15,47 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="coverlet.collector" Version="6.0.4">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="FluentAssertions" Version="8.7.1" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.9" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
-
-		<!-- ✅ Correct test stack -->
+		<!-- ✅ Test framework + runner (compatible with .NET 8 and GitHub Actions) -->
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
 		<PackageReference Include="xunit" Version="2.9.2" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+
+		<!-- ✅ Code coverage -->
+		<PackageReference Include="coverlet.collector" Version="6.0.4">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+		<!-- ✅ Testing + mocking helpers -->
+		<PackageReference Include="FluentAssertions" Version="8.7.1" />
 		<PackageReference Include="Moq" Version="4.20.72" />
+
+		<!-- ✅ EF Core and config dependencies (for integration tests) -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- ✅ Reference your main projects -->
 		<ProjectReference Include="..\UserService.Application\UserService.Application.csproj" />
 		<ProjectReference Include="..\UserService.Domain\UserService.Domain.csproj" />
 		<ProjectReference Include="..\UserService.Infrastructure\UserService.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- ✅ Copy appsettings.json for integration tests -->
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- ✅ Global using for xUnit attributes -->
 		<Using Include="Xunit" />
 	</ItemGroup>
 
