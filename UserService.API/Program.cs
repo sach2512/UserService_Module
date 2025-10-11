@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -13,16 +13,14 @@ namespace UserService.API
 {
     public class Program
     {
-        //these is program.cs 
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // ? Bind to Render's port (default to 5000 locally)
-            var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-            builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            // Bind to Azure's default port (Render line not needed for Azure)
+            builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
-            // Add services to the container.
+            // Add services
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -80,14 +78,12 @@ namespace UserService.API
 
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            // ✅ Enable Swagger for Production (Azure)
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
-            // ? REMOVE THIS � it breaks on Render
-            // app.UseHttpsRedirection();
+            // ✅ Keep HTTPS redirection in Azure (it supports SSL)
+            app.UseHttpsRedirection();
 
             app.UseAuthentication();
             app.UseAuthorization();
