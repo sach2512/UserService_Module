@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - main
+      - main   # Trigger only when pushing to main
 
 jobs:
   restore-and-build:
@@ -38,16 +38,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # 🧩 DEBUG: List all discovered tests before running
+      # 🔍 Debug: List discovered tests
       - name: Discover tests
         run: dotnet test ./UserService.Tests/UserService.Tests.csproj --list-tests --configuration Release
 
-      # 🧪 Run only "pure" unit tests (no DB dependencies)
-      # Adjust filter if you have [Trait("Category","Unit")] or namespace-based grouping
+      # 🧪 Run Unit Tests (only)
       - name: Run Unit Tests
         run: |
-          echo "🔍 Running UNIT tests only..."
-          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --filter "Category=Unit" --no-build --verbosity normal || echo "❌ Unit tests failed"
+          echo "🧪 Running UNIT tests..."
+          dotnet test ./UserService.Tests/UserService.Tests.csproj \
+            --configuration Release \
+            --filter "Category=Unit" \
+            --no-build --verbosity normal
 
 
   integration-tests:
@@ -63,10 +65,12 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD}' -Q 'SELECT 1'" 
-          --health-interval 10s 
-          --health-timeout 5s 
-          --health-retries 10
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD}' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+          --name sqlserver-test
+          --hostname sqlserver-test
 
     steps:
       - name: Checkout code
@@ -77,27 +81,39 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # ⏳ Wait for SQL Server startup and print logs
       - name: Wait for SQL Server to start
-        run: sleep 30
+        run: |
+          echo "⏳ Waiting 60s for SQL Server to initialize..."
+          sleep 60
+          echo "🐳 Docker containers running:"
+          docker ps -a
+          echo "📜 SQL Server logs:"
+          docker logs sqlserver-test || true
 
-      # 🧩 DEBUG: Test SQL connectivity before running integration tests
+      # 🔍 Test SQL Connection
       - name: Check SQL Connection
         run: |
-          echo "🔍 Checking SQL Server connectivity..."
+          echo "🔍 Testing SQL Server connectivity..."
           /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "SELECT name FROM sys.databases"
           echo "✅ SQL connection successful."
 
+      # 🧱 Create Test Database
       - name: Create Integration Test Database
         run: |
-          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
+          /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
           echo "✅ Created test DB: UserServiceDBFinal"
 
+      # 🚀 Run Integration Tests
       - name: Run Integration Tests
         env:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
         run: |
           echo "🚀 Running INTEGRATION tests..."
-          dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --filter "Category=Integration" --no-build --verbosity normal || echo "❌ Integration tests failed"
+          dotnet test ./UserService.Tests/UserService.Tests.csproj \
+            --configuration Release \
+            --filter "Category=Integration" \
+            --no-build --verbosity normal
 
 
   deploy-production:
@@ -113,9 +129,11 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # 📦 Publish Application
       - name: Publish app
         run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish --verbosity quiet
 
+      # ☁️ Deploy to Azure Web App
       - name: Deploy to Azure Web App (Production)
         uses: azure/webapps-deploy@v3
         with:
