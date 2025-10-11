@@ -31,9 +31,12 @@ namespace UserService.Tests
     };
 
             // ✅ Fix: Cast to nullable string to satisfy .NET 8 AddInMemoryCollection
+           
             var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(settings.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value))
-                .Build();
+            .AddInMemoryCollection(settings.Select(kvp =>
+             new KeyValuePair<string, string?>(kvp.Key, kvp.Value)))
+            .Build();
+
 
             _configurationMock.Setup(x => x[It.IsAny<string>()])
                 .Returns((string key) => config[key]);
