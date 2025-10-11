@@ -35,10 +35,11 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests (simple exact local behavior)
         run: |
               dotnet restore ./UserService.sln
-              dotnet test ./UserService.Tests/UserService.Tests.csproj --configuration Release --verbosity minimal
+              dotnet build ./UserService.sln --no-incremental
+              dotnet test ./UserService.Tests/UserService.Tests.csproj --no-restore --verbosity minimal
 
 
 
