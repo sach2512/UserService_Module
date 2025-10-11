@@ -64,10 +64,6 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${{ secrets.SQL_PASSWORD }}' -Q 'SELECT 1' || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 30
           --name sqlserver-test
           --hostname sqlserver-test
 
@@ -91,8 +87,8 @@ jobs:
           echo "📜 SQL Server logs:"
           docker logs sqlserver-test || true
 
-          echo "🔍 Checking if SQL Server is healthy..."
-          docker inspect -f '{{.State.Health.Status}}' sqlserver-test || true
+          echo "🔍 Checking if SQL Server is running..."
+          docker inspect -f '{{.State.Status}}' sqlserver-test || true
 
       - name: Check SQL Connection
         run: |
