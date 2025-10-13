@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.12.35506.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UserService", "UserService", "{5FAC7BA9-BB35-49AD-A050-84A95C3BB3EB}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\deploy-production.yml = .github\workflows\deploy-production.yml
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserService.Domain", "UserService.Domain\UserService.Domain.csproj", "{72DD4C80-C82A-48DF-B35D-4A44C5F4A45B}"
 EndProject
