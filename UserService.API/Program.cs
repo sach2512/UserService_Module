@@ -79,7 +79,13 @@ namespace UserService.API
             var app = builder.Build();
 
             // ✅ Enable Swagger for Production (Azure)
+           
             app.UseSwagger();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "User Service API v1");
+                options.RoutePrefix = string.Empty; // 👈 Loads Swagger directly at "/"
+            });
             app.UseSwaggerUI();
 
             // ✅ Keep HTTPS redirection in Azure (it supports SSL)
