@@ -33,7 +33,6 @@ jobs:
             **/bin/Release/net8.0/
           if-no-files-found: error
 
-
   # 🧪 2. Unit Tests
   unit-tests:
     runs-on: ubuntu-22.04
@@ -63,7 +62,6 @@ jobs:
             --configuration Release \
             --filter "Category=Unit" \
             --no-build --verbosity normal
-
 
   # 🔗 3. Integration Tests
   integration-tests:
@@ -135,7 +133,6 @@ jobs:
             --filter "Category=Integration" \
             --no-build --verbosity normal
 
-
   # ☁️ 4. Deploy to Staging
   deploy-staging:
     runs-on: ubuntu-22.04
@@ -153,18 +150,17 @@ jobs:
       - name: Publish app
         run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish --verbosity quiet
 
-      - name: Deploy to Azure Web App (Staging)
+      - name: Deploy to Azure Web App (Stagging)
         uses: azure/webapps-deploy@v3
         with:
           app-name: "UserService"
           slot-name: "stagging"
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING}}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ./publish
-
 
   # 💥 5. Load Testing
   load-test:
-    name: "Run Load Tests on Staging"
+    name: "Run Load Tests on Stagging"
     runs-on: ubuntu-22.04
     needs: deploy-staging
 
@@ -199,19 +195,23 @@ jobs:
           name: jmeter-report
           path: ./results/report
 
-
-  # 🔁 6. Swap Staging → Production
+  # 🔁 6. Swap Stagging → Production
   swap-to-production:
-    name: "Swap Slots (Staging → Production)"
+    name: "Swap Stagging → Production"
     runs-on: ubuntu-22.04
     needs: load-test
     if: success()
 
     steps:
-      - name: Swap staging slot to production
-        uses: azure/webapps-deploy@v3
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          app-name: "UserService"
-          slot-name: "staging"
-          action: "swap"
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Swap stagging slot to production
+        run: |
+          az webapp deployment slot swap \
+            --resource-group Ecommerce_Project \
+            --name UserService \
+            --slot stagging \
+            --target-slot production
