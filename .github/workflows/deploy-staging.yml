@@ -34,7 +34,7 @@ jobs:
           if-no-files-found: error
 
 
-  # 🧪 2. Unit Tests job
+ 
   unit-tests:
     runs-on: ubuntu-22.04
     needs: restore-and-build
@@ -54,15 +54,16 @@ jobs:
           name: build-output
 
       - name: Discover tests
-        run: dotnet test ./UserServiceTests.test/UserServiceTests.test.csproj --list-tests --configuration Release
+        run: dotnet test ./UserService.Tests/UserService.Tests.csproj --list-tests --configuration Release
 
       - name: Run Unit Tests
         run: |
           echo "🧪 Running UNIT tests..."
-          dotnet test ./UserServiceTests.test/UserServiceTests.test.csproj \
+          dotnet test ./UserService.Tests/UserService.Tests.csproj \
             --configuration Release \
             --filter "Category=Unit" \
             --no-build --verbosity normal
+
 
 
   # 🔗 3. Integration Tests job
