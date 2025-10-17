@@ -163,5 +163,5 @@ jobs:
           az webapp deployment slot swap \
             --resource-group Ecommerce_Project \
             --name UserService \
-            --slot staging \
+            --slot stagging \
             --target-slot production
