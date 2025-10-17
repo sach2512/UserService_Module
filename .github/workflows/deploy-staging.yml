@@ -176,17 +176,25 @@ jobs:
           unzip apache-jmeter-5.6.3.zip
           export PATH=$PATH:$(pwd)/apache-jmeter-5.6.3/bin
 
-      - name: Run JMeter Load Test
+      - name: Run JMeter Load Test (User Login 100 Loops)
         run: |
-          jmeter -n -t ./loadtests/UserLoginTest.jmx -l ./results/results.jtl -e -o ./results/report || true
+          echo "🚀 Running JMeter test for User Login (1 user, 100 loops)..."
+          jmeter -n \
+                 -t ./loadtests/UserLoginSingleUser100Loops.jmx \
+                 -l ./results/results.jtl \
+                 -e -o ./results/report
 
       - name: Parse JMeter Results
         run: |
+          echo "📊 Checking for server errors..."
           if grep -q "500" ./results/results.jtl; then
-            echo "❌ Load test failed due to 500 errors"
+            echo "❌ Load test failed: HTTP 500 errors detected!"
+            exit 1
+          elif grep -q "false" ./results/results.jtl; then
+            echo "❌ Load test failed: One or more requests were unsuccessful."
             exit 1
           else
-            echo "✅ Load test passed"
+            echo "✅ Load test passed successfully!"
           fi
 
       - name: Upload Load Test Report
