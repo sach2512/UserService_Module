@@ -54,12 +54,12 @@ jobs:
           name: build-output
 
       - name: Discover tests
-        run: dotnet test ./UserServiceTests.Tests/UserServiceTests.Tests.csproj --list-tests --configuration Release
+        run: dotnet test ./UserServiceTests.test/UserServiceTests.test.csproj --list-tests --configuration Release
 
       - name: Run Unit Tests
         run: |
           echo "🧪 Running UNIT tests..."
-          dotnet test ./UserService.Tests/UserService.Tests.csproj \
+          dotnet test ./UserServiceTests.test/UserServiceTests.test.csproj \
             --configuration Release \
             --filter "Category=Unit" \
             --no-build --verbosity normal
@@ -132,7 +132,7 @@ jobs:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
         run: |
           echo "🚀 Running INTEGRATION tests..."
-          dotnet test ./UserService.Tests/UserService.Tests.csproj \
+          dotnet test ./UserServiceTests.test/UserServiceTests.test.csproj \
             --configuration Release \
             --filter "Category=Integration" \
             --no-build --verbosity normal
