@@ -34,7 +34,7 @@ jobs:
           if-no-files-found: error
 
 
- 
+  # 🧪 2. Unit Tests
   unit-tests:
     runs-on: ubuntu-22.04
     needs: restore-and-build
@@ -65,8 +65,7 @@ jobs:
             --no-build --verbosity normal
 
 
-
-  # 🔗 3. Integration Tests job
+  # 🔗 3. Integration Tests
   integration-tests:
     runs-on: ubuntu-22.04
     needs: unit-tests
@@ -104,13 +103,11 @@ jobs:
           echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
           source ~/.bashrc
 
-      - name: Wait for SQL Server to start and show logs
+      - name: Wait for SQL Server to start
         run: |
           echo "⏳ Waiting 30s for SQL Server to initialize..."
           sleep 30
-          echo "🐳 Docker containers running:"
           docker ps -a
-          echo "📜 SQL Server logs:"
           docker logs sqlserver-test || true
 
       - name: Check SQL Connection
@@ -133,13 +130,13 @@ jobs:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
         run: |
           echo "🚀 Running INTEGRATION tests..."
-          dotnet test ./UserServiceTests.test/UserServiceTests.test.csproj \
+          dotnet test ./UserService.Tests/UserService.Tests.csproj \
             --configuration Release \
             --filter "Category=Integration" \
             --no-build --verbosity normal
 
 
-  # ☁️ 4. Deploy to Staging job
+  # ☁️ 4. Deploy to Staging
   deploy-staging:
     runs-on: ubuntu-22.04
     needs: [unit-tests, integration-tests]
@@ -160,12 +157,12 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: "UserService"
-          slot-name: "stagging"
+          slot-name: "staging"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ./publish
 
 
-  # 💥 5. Load Testing job
+  # 💥 5. Load Testing
   load-test:
     name: "Run Load Tests on Staging"
     runs-on: ubuntu-22.04
@@ -203,7 +200,7 @@ jobs:
           path: ./results/report
 
 
-  # 🔁 6. Swap Staging → Production job
+  # 🔁 6. Swap Staging → Production
   swap-to-production:
     name: "Swap Slots (Staging → Production)"
     runs-on: ubuntu-22.04
@@ -215,6 +212,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: "UserService"
-          slot-name: "stagging"
+          slot-name: "staging"
           action: "swap"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
