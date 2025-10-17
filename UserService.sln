@@ -21,6 +21,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "loadtests", "loadtests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
 		api.csv = api.csv
+		loadtests\UserLoginSingleUser100Loops.jmx = loadtests\UserLoginSingleUser100Loops.jmx
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserService.Tests", "UserService.Tests\UserService.Tests.csproj", "{5CBB4850-25C4-4DB0-A0B6-B25B531B8C54}"
