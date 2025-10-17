@@ -124,7 +124,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: "UserService"
-          slot-name: "stagging"
+          slot-name: "staging"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ./publish
 
@@ -133,6 +133,7 @@ jobs:
     name: "Run Load Tests on Staging"
     runs-on: ubuntu-22.04
     needs: deploy-staging
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -147,8 +148,6 @@ jobs:
           export JMETER_HOME="$PWD/apache-jmeter-5.6.3"
           echo "$JMETER_HOME/bin" >> $GITHUB_PATH
           sudo ln -s "$JMETER_HOME/bin/jmeter" /usr/local/bin/jmeter
-          -Jjmeterengine.force.system.exit=true
-
 
       - name: Verify JMeter Installation
         run: jmeter --version
@@ -159,7 +158,8 @@ jobs:
           mkdir -p ./results/report
           jmeter -n -t ./loadtests/UserLoginSingleUser100Loops.jmx \
                  -l ./results/results.jtl \
-                 -e -o ./results/report
+                 -e -o ./results/report \
+                 -Jjmeterengine.force.system.exit=true
 
       - name: Parse JMeter Results
         run: |
