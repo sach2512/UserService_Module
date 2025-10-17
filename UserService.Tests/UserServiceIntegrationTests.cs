@@ -3,17 +3,17 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using UserService.Application.DTOs;
-using UserService.Application.Services;
 using UserService.Domain.Entities;
 using UserService.Infrastructure.Identity;
 using UserService.Infrastructure.Persistence;
 using UserService.Infrastructure.Repositories;
-using Xunit;
 
-namespace UserService.Tests
+namespace UserServiceTests.test
 {
     public class UserServiceIntegrationTests : IClassFixture<TestDatabaseFixture>
     {

@@ -1,0 +1,17 @@
+method,path
+POST,/api/User/register
+POST,/api/User/send-confirmation-email
+POST,/api/User/verify-email
+POST,/api/User/login
+POST,/api/User/refresh-token
+POST,/api/User/revoke-token
+GET,/api/User/profile/{userId}
+PUT,/api/User/profile
+POST,/api/User/forgot-password
+POST,/api/User/reset-password
+POST,/api/User/change-password
+POST,/api/User/addresses
+GET,/api/User/{userId}/addresses
+POST,/api/User/delete-address
+GET,/api/User/{userId}/exists
+GET,/api/User/{userId}/address/{addressId}

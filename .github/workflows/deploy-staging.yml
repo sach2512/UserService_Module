@@ -1,5 +1,4 @@
-﻿# trigger test push
-name: "Deploy to Staging"
+﻿name: "Deploy to Staging"
 
 on:
   push:
@@ -163,3 +162,58 @@ jobs:
           slot-name: "stagging"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ./publish
+
+
+  # 💥 5. Load Testing job
+  load-test:
+    name: "Run Load Tests on Staging"
+    runs-on: ubuntu-22.04
+    needs: deploy-staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install JMeter
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y openjdk-17-jre-headless wget unzip
+          wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.zip
+          unzip apache-jmeter-5.6.3.zip
+          export PATH=$PATH:$(pwd)/apache-jmeter-5.6.3/bin
+
+      - name: Run JMeter Load Test
+        run: |
+          jmeter -n -t ./loadtests/UserLoginTest.jmx -l ./results/results.jtl -e -o ./results/report || true
+
+      - name: Parse JMeter Results
+        run: |
+          if grep -q "500" ./results/results.jtl; then
+            echo "❌ Load test failed due to 500 errors"
+            exit 1
+          else
+            echo "✅ Load test passed"
+          fi
+
+      - name: Upload Load Test Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-report
+          path: ./results/report
+
+
+  # 🔁 6. Swap Staging → Production job
+  swap-to-production:
+    name: "Swap Slots (Staging → Production)"
+    runs-on: ubuntu-22.04
+    needs: load-test
+    if: success()
+
+    steps:
+      - name: Swap staging slot to production
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "UserService"
+          slot-name: "stagging"
+          action: "swap"
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}

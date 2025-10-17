@@ -25,13 +25,13 @@ namespace UserService.Tests
 
             var settings = new Dictionary<string, string>
     {
-        {"JwtSettings:SecretKey", "SuperSecretKeyForJwtTests_1234567890!@#"}, // >= 32 chars
+        {"JwtSettings:SecretKey", "SuperSecretKeyForJwtTests_1234567890!@#"},
         {"JwtSettings:Issuer", "TestIssuer"},
         {"JwtSettings:AccessTokenExpirationMinutes", "60"}
     };
 
-            // ✅ Fix: Cast to nullable string to satisfy .NET 8 AddInMemoryCollection
-           
+       
+
             var config = new ConfigurationBuilder()
             .AddInMemoryCollection(settings.Select(kvp =>
              new KeyValuePair<string, string?>(kvp.Key, kvp.Value)))
@@ -46,9 +46,7 @@ namespace UserService.Tests
         }
 
 
-        // ================================
-        // RegisterAsync
-        // ================================
+       
         [Fact]
         public async Task RegisterAsync_ShouldReturnTrue_WhenRegistrationSuccessful()
         {
@@ -80,9 +78,7 @@ namespace UserService.Tests
             Assert.False(result);
         }
 
-        // ================================
-        // LoginAsync
-        // ================================
+      
         [Fact]
         public async Task LoginAsync_ShouldReturnToken_WhenValidCredentials()
         {
@@ -124,9 +120,7 @@ namespace UserService.Tests
             Assert.Equal("Invalid client ID.", result.ErrorMessage);
         }
 
-        // ================================
-        // SendConfirmationEmailAsync
-        // ================================
+      
         [Fact]
         public async Task SendConfirmationEmailAsync_ShouldReturnToken_WhenUserExists()
         {

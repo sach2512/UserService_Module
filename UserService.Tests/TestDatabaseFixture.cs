@@ -3,11 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using UserService.Infrastructure.Identity;
 using UserService.Infrastructure.Persistence;
 
-namespace UserService.Tests
+namespace UserServiceTests.test
 {
     public class TestDatabaseFixture : IDisposable
     {
@@ -63,7 +66,7 @@ namespace UserService.Tests
 
             ServiceProvider = services.BuildServiceProvider();
 
-            // ⚙️ Step 5: Apply migrations automatically
+            // ⚙ Step 5: Apply migrations automatically
             DbContext = ServiceProvider.GetRequiredService<UserDbContext>();
             Console.WriteLine("🚀 Applying migrations...");
             DbContext.Database.Migrate();
