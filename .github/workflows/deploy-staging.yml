@@ -54,7 +54,7 @@ jobs:
           name: build-output
 
       - name: Discover tests
-        run: dotnet test ./UserServiceTests.Tests/UserServiceTests.Tests.csproj --list-tests --configuration Release
+        run: dotnet test ./UserServiceTests.Test/UserServiceTests.Test.csproj --list-tests --configuration Release
 
       - name: Run Unit Tests
         run: |
