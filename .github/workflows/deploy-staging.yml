@@ -1,14 +1,23 @@
-﻿name: "Deploy to Staging"
+﻿name: "Deploy to Staging & Optional Resume"
 
 on:
   push:
     branches:
-      - staging   # 👈 Trigger only when pushing to staging
+      - staging   # Auto-trigger on staging commits
+
+  # Manual trigger with input
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Stage to run (full, load-test, swap)"
+        required: true
+        default: "full"
 
 jobs:
-  # 🏗️ 1. Build job
+  # 🏗️ 1. Build
   restore-and-build:
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
@@ -37,6 +46,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
     needs: restore-and-build
+    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
@@ -52,12 +62,8 @@ jobs:
         with:
           name: build-output
 
-      - name: Discover tests
-        run: dotnet test ./UserService.Tests/UserService.Tests.csproj --list-tests --configuration Release
-
       - name: Run Unit Tests
         run: |
-          echo "🧪 Running UNIT tests..."
           dotnet test ./UserService.Tests/UserService.Tests.csproj \
             --configuration Release \
             --filter "Category=Unit" \
@@ -67,6 +73,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-22.04
     needs: unit-tests
+    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     services:
       sqlserver:
@@ -76,9 +83,6 @@ jobs:
           ACCEPT_EULA: "Y"
         ports:
           - 1433:1433
-        options: >-
-          --name sqlserver-test
-          --hostname sqlserver-test
 
     steps:
       - name: Checkout code
@@ -94,40 +98,10 @@ jobs:
         with:
           name: build-output
 
-      - name: Install SQL tools
-        run: |
-          sudo apt-get update
-          sudo ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
-          echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
-          source ~/.bashrc
-
-      - name: Wait for SQL Server to start
-        run: |
-          echo "⏳ Waiting 30s for SQL Server to initialize..."
-          sleep 30
-          docker ps -a
-          docker logs sqlserver-test || true
-
-      - name: Check SQL Connection
-        run: |
-          echo "🔍 Testing SQL Server connectivity..."
-          for i in {1..3}; do
-            sqlcmd -S localhost,1433 -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "SELECT name FROM sys.databases" && break
-            echo "⚠️ Attempt $i failed, retrying in 10s..."
-            sleep 10
-          done
-          echo "✅ SQL connection successful (or max retries reached)."
-
-      - name: Create Integration Test Database
-        run: |
-          sqlcmd -S localhost,1433 -U sa -P "${{ secrets.SQL_PASSWORD }}" -Q "CREATE DATABASE UserServiceDBFinal"
-          echo "✅ Created test DB: UserServiceDBFinal"
-
       - name: Run Integration Tests
         env:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
         run: |
-          echo "🚀 Running INTEGRATION tests..."
           dotnet test ./UserService.Tests/UserService.Tests.csproj \
             --configuration Release \
             --filter "Category=Integration" \
@@ -136,7 +110,8 @@ jobs:
   # ☁️ 4. Deploy to Staging
   deploy-staging:
     runs-on: ubuntu-22.04
-    needs: [unit-tests, integration-tests]
+    needs: [integration-tests]
+    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
@@ -163,35 +138,38 @@ jobs:
     name: "Run Load Tests on Stagging"
     runs-on: ubuntu-22.04
     needs: deploy-staging
+    if: github.event.inputs.stage == 'load-test' || github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install JMeter
+      - name: Install and Configure JMeter
         run: |
           sudo apt-get update -y
           sudo apt-get install -y openjdk-17-jre-headless wget unzip
           wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.zip
-          unzip apache-jmeter-5.6.3.zip
-          export PATH=$PATH:$(pwd)/apache-jmeter-5.6.3/bin
+          unzip -q apache-jmeter-5.6.3.zip
+          JMETER_HOME=$(pwd)/apache-jmeter-5.6.3
+          echo "$JMETER_HOME/bin" >> $GITHUB_PATH
+
+      - name: Verify JMeter Installation
+        run: jmeter --version
 
       - name: Run JMeter Load Test (User Login 100 Loops)
         run: |
-          echo "🚀 Running JMeter test for User Login (1 user, 100 loops)..."
-          jmeter -n \
-                 -t ./loadtests/UserLoginSingleUser100Loops.jmx \
+          echo "🚀 Running JMeter test..."
+          jmeter -n -t ./loadtests/UserLoginSingleUser100Loops.jmx \
                  -l ./results/results.jtl \
                  -e -o ./results/report
 
       - name: Parse JMeter Results
         run: |
-          echo "📊 Checking for server errors..."
           if grep -q "500" ./results/results.jtl; then
-            echo "❌ Load test failed: HTTP 500 errors detected!"
+            echo "❌ Load test failed: 500 errors detected!"
             exit 1
           elif grep -q "false" ./results/results.jtl; then
-            echo "❌ Load test failed: One or more requests were unsuccessful."
+            echo "❌ Load test failed: Request failures found!"
             exit 1
           else
             echo "✅ Load test passed successfully!"
@@ -208,7 +186,7 @@ jobs:
     name: "Swap Stagging → Production"
     runs-on: ubuntu-22.04
     needs: load-test
-    if: success()
+    if: github.event.inputs.stage == 'swap' || github.event.inputs.stage == 'full'
 
     steps:
       - name: Azure Login
