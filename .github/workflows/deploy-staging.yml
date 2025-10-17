@@ -3,8 +3,7 @@
 on:
   push:
     branches:
-      - staging   # Auto-trigger on staging commits
-
+      - staging
   workflow_dispatch:
     inputs:
       stage:
@@ -13,25 +12,19 @@ on:
         default: "full"
 
 jobs:
-  # 🏗️ 1. Build
   restore-and-build:
     runs-on: ubuntu-22.04
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
       - name: Restore dependencies
         run: dotnet restore --verbosity quiet
-
       - name: Build app
         run: dotnet build --configuration Release --no-restore --verbosity quiet
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -40,25 +33,20 @@ jobs:
             **/bin/Release/net8.0/
           if-no-files-found: error
 
-  # 🧪 2. Unit Tests
   unit-tests:
     runs-on: ubuntu-22.04
     needs: restore-and-build
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
           name: build-output
-
       - name: Run Unit Tests
         run: |
           dotnet test ./UserService.Tests/UserService.Tests.csproj \
@@ -66,11 +54,9 @@ jobs:
             --filter "Category=Unit" \
             --no-build --verbosity normal
 
-  # 🔗 3. Integration Tests
   integration-tests:
     runs-on: ubuntu-22.04
     needs: unit-tests
-
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -79,21 +65,17 @@ jobs:
           ACCEPT_EULA: "Y"
         ports:
           - 1433:1433
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
           name: build-output
-
       - name: Run Integration Tests
         env:
           ConnectionStrings__MyConnectionString: "Server=localhost,1433;Database=UserServiceDBFinal;User Id=sa;Password=${{ secrets.SQL_PASSWORD }};TrustServerCertificate=True;"
@@ -103,23 +85,18 @@ jobs:
             --filter "Category=Integration" \
             --no-build --verbosity normal
 
-  # ☁️ 4. Deploy to Staging
   deploy-staging:
     runs-on: ubuntu-22.04
     needs: integration-tests
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
       - name: Publish app
         run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish --verbosity quiet
-
       - name: Deploy to Azure Web App (Staging)
         uses: azure/webapps-deploy@v3
         with:
@@ -128,17 +105,14 @@ jobs:
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ./publish
 
-  # 💥 5. Load Testing
   load-test:
     name: "Run Load Tests on Staging"
     runs-on: ubuntu-22.04
     needs: deploy-staging
     timeout-minutes: 30
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install and Configure JMeter
         run: |
           sudo apt-get update -y
@@ -148,49 +122,42 @@ jobs:
           export JMETER_HOME="$PWD/apache-jmeter-5.6.3"
           echo "$JMETER_HOME/bin" >> $GITHUB_PATH
           sudo ln -s "$JMETER_HOME/bin/jmeter" /usr/local/bin/jmeter
-
       - name: Verify JMeter Installation
         run: jmeter --version
-
-      - name: Run JMeter Load Test (User Login 100 Loops)
+      - name: Run JMeter Load Test (User Login 1000 Loops)
         run: |
           echo "🚀 Running JMeter test..."
           mkdir -p ./results/report
           jmeter -n -t ./loadtests/UserLoginSingleUser100Loops.jmx \
                  -l ./results/results.jtl \
-                 -e -o ./results/report \
-                 -Jjmeterengine.force.system.exit=true
-
+                 -e -o ./results/report
       - name: Parse JMeter Results
         run: |
-          if grep -q "500" ./results/results.jtl; then
-            echo "❌ Load test failed: 500 errors detected!"
+          echo "🔍 Checking JMeter results..."
+          if grep -E "<responseCode>500</responseCode>" ./results/results.jtl; then
+            echo "❌ Load test failed: HTTP 500 detected!"
             exit 1
-          elif grep -q "false" ./results/results.jtl; then
-            echo "❌ Load test failed: Request failures found!"
+          elif grep -E "<success>false</success>" ./results/results.jtl; then
+            echo "❌ Load test failed: some requests failed!"
             exit 1
           else
-            echo "✅ Load test passed successfully!"
+            echo "✅ Load test passed successfully! All responses were successful (no 500s or failures)."
           fi
-
       - name: Upload Load Test Report
         uses: actions/upload-artifact@v4
         with:
           name: jmeter-report
           path: ./results/report
 
-  # 🔁 6. Swap Staging → Production
   swap-to-production:
     name: "Swap Staging → Production"
     runs-on: ubuntu-22.04
     needs: load-test
-
     steps:
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Swap staging slot to production
         run: |
           az webapp deployment slot swap \
