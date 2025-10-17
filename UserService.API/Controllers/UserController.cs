@@ -335,6 +335,7 @@ namespace UserService.API.Controllers
             {
                 // In case parsing fails, fallback to raw user agent or unknown
                 return "Unknown";
+                // return unoknoes
             }
         }
     }
