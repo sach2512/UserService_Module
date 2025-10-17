@@ -5,7 +5,6 @@ on:
     branches:
       - staging   # Auto-trigger on staging commits
 
-  # Manual trigger with input
   workflow_dispatch:
     inputs:
       stage:
@@ -17,7 +16,6 @@ jobs:
   # 🏗️ 1. Build
   restore-and-build:
     runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
@@ -46,7 +44,6 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
     needs: restore-and-build
-    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
@@ -73,7 +70,6 @@ jobs:
   integration-tests:
     runs-on: ubuntu-22.04
     needs: unit-tests
-    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
 
     services:
       sqlserver:
@@ -110,8 +106,7 @@ jobs:
   # ☁️ 4. Deploy to Staging
   deploy-staging:
     runs-on: ubuntu-22.04
-    needs: [integration-tests]
-    if: github.event_name == 'push' && github.event.inputs.stage == 'full'
+    needs: integration-tests
 
     steps:
       - name: Checkout code
@@ -125,20 +120,19 @@ jobs:
       - name: Publish app
         run: dotnet publish UserService.API/UserService.API.csproj -c Release -o ./publish --verbosity quiet
 
-      - name: Deploy to Azure Web App (Stagging)
+      - name: Deploy to Azure Web App (Staging)
         uses: azure/webapps-deploy@v3
         with:
           app-name: "UserService"
-          slot-name: "stagging"
+          slot-name: "staging"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ./publish
 
   # 💥 5. Load Testing
   load-test:
-    name: "Run Load Tests on Stagging"
+    name: "Run Load Tests on Staging"
     runs-on: ubuntu-22.04
     needs: deploy-staging
-    if: github.event.inputs.stage == 'load-test' || github.event.inputs.stage == 'full'
 
     steps:
       - name: Checkout code
@@ -150,8 +144,9 @@ jobs:
           sudo apt-get install -y openjdk-17-jre-headless wget unzip
           wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.zip
           unzip -q apache-jmeter-5.6.3.zip
-          JMETER_HOME=$(pwd)/apache-jmeter-5.6.3
+          export JMETER_HOME="$PWD/apache-jmeter-5.6.3"
           echo "$JMETER_HOME/bin" >> $GITHUB_PATH
+          sudo ln -s "$JMETER_HOME/bin/jmeter" /usr/local/bin/jmeter
 
       - name: Verify JMeter Installation
         run: jmeter --version
@@ -159,6 +154,7 @@ jobs:
       - name: Run JMeter Load Test (User Login 100 Loops)
         run: |
           echo "🚀 Running JMeter test..."
+          mkdir -p ./results/report
           jmeter -n -t ./loadtests/UserLoginSingleUser100Loops.jmx \
                  -l ./results/results.jtl \
                  -e -o ./results/report
@@ -181,12 +177,11 @@ jobs:
           name: jmeter-report
           path: ./results/report
 
-  # 🔁 6. Swap Stagging → Production
+  # 🔁 6. Swap Staging → Production
   swap-to-production:
-    name: "Swap Stagging → Production"
+    name: "Swap Staging → Production"
     runs-on: ubuntu-22.04
     needs: load-test
-    if: github.event.inputs.stage == 'swap' || github.event.inputs.stage == 'full'
 
     steps:
       - name: Azure Login
@@ -194,10 +189,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Swap stagging slot to production
+      - name: Swap staging slot to production
         run: |
           az webapp deployment slot swap \
             --resource-group Ecommerce_Project \
             --name UserService \
-            --slot stagging \
+            --slot staging \
             --target-slot production
