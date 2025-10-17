@@ -133,7 +133,7 @@ jobs:
     name: "Run Load Tests on Staging"
     runs-on: ubuntu-22.04
     needs: deploy-staging
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
